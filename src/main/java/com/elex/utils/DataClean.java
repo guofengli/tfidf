@@ -123,9 +123,5 @@ public class DataClean {
 //		System.out.println(Math.log((float)3343301/(float)2) * 0.010869565) ;
 		
 //		System.out.println(Dictionary.dictionary.size());
-		StringTokenizer t = new StringTokenizer("k nif dk	fd f 0.1\n ds ds", "\n");
-		while(t.hasMoreTokens()){
-			System.out.println(t.nextToken());
-		}
 	}
 }
