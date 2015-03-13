@@ -196,7 +196,7 @@ public class TFIDF {
 
 		Configuration conf = new Configuration();
 		conf.set("userCount", "0");
-		Job tfjob = new Job(conf, "tfjob");
+		Job tfjob = Job.getInstance(conf,"tfjob");
 		tfjob.setJarByClass(TFIDF.class);
 		tfjob.setMapperClass(TFMap.class);
 		// tfjob.setCombinerClass(TFReduce.class);
