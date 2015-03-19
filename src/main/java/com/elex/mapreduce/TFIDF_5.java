@@ -94,7 +94,7 @@ public class TFIDF_5 {
 						Text outputKey = new Text();
 						Text outputValue = new Text();
 						outputKey.set(word);
-						outputValue.set(user + " " + tf);
+						outputValue.set(user + "\t" + tf);
 						context.write(outputKey, outputValue);
 					}
 				}
@@ -141,12 +141,12 @@ public class TFIDF_5 {
 			Text outputValue = new Text();
 			while (userIter.hasNext()) {
 				String usertftmp = userIter.next();
-				StringTokenizer usertf = new StringTokenizer(usertftmp, " ");
+				StringTokenizer usertf = new StringTokenizer(usertftmp, "\t");
 				String user = usertf.nextToken();
 				String tfStr = usertf.nextToken();
 				float tf = Float.parseFloat(tfStr.trim().toString());
 				float tfidf = tf * idf;
-				String outputTmp = user + " " + tfidf;
+				String outputTmp = user + "\t" + tfidf;
 				outputValue.set(outputTmp);
 				context.write(key, outputValue);
 			}
