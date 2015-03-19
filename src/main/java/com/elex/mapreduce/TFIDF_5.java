@@ -14,6 +14,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -24,10 +25,12 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import com.elex.mapreduce.TFIDF_4.IDFMap;
 import com.elex.mapreduce.TFIDF_4.IDFReduce;
 import com.elex.utils.DataClean;
+import com.google.common.io.Closeables;
 
 public class TFIDF_5 {
-	public static String hdfsURL = "hdfs://10.1.20.241:8020";
+	public static String hdfsURL = "hdfs://namenode:8020";
 	public static String fileURL = "/tmp/usercount";
+
 	public static class TFMap extends Mapper<Object, Text, Text, Text> {
 		public void map(Object key, Text value, Context context)
 				throws IOException, InterruptedException {
@@ -51,8 +54,9 @@ public class TFIDF_5 {
 						String word = wordEntry.getKey();
 						int wordCount = wordEntry.getValue();
 						float tf = (float) wordCount / (float) wordTotal;
-						String outputStr = word + " " + Float.toString(tf) + ",";
-						byte []bytes = outputStr.getBytes();
+						String outputStr = word + " " + Float.toString(tf)
+								+ ",";
+						byte[] bytes = outputStr.getBytes();
 						outputValue.append(bytes, 0, bytes.length);
 					}
 				}
@@ -65,30 +69,34 @@ public class TFIDF_5 {
 	public static class TFReduce extends Reducer<Text, Text, Text, Text> {
 		public void reduce(Text key, Iterable<Text> values, Context context)
 				throws IOException, InterruptedException {
-//			StringBuffer sb = new StringBuffer();
+			// StringBuffer sb = new StringBuffer();
 			Iterator<Text> iter = values.iterator();
 			while (iter.hasNext()) {
-//				sb.append(iter.next().toString() + "\t");
+				// sb.append(iter.next().toString() + "\t");
 				context.write(key, iter.next());
 			}
-//			Text outputValue = new Text();
-//			outputValue.set(sb.toString());
-//			context.write(key, outputValue);
+			// Text outputValue = new Text();
+			// outputValue.set(sb.toString());
+			// context.write(key, outputValue);
 		}
 	}
 
 	public static class IDFMap extends Mapper<Object, Text, Text, Text> {
-		public void map(Object key, Text value, Context context) throws IOException, InterruptedException{
+		public void map(Object key, Text value, Context context)
+				throws IOException, InterruptedException {
 			String valuesTmp = value.toString();
 			StringTokenizer userWordFrag = new StringTokenizer(valuesTmp, "\n");
-			while(userWordFrag.hasMoreTokens()){
-				//String userWordtmp = userWordFrag.nextToken();
-				StringTokenizer userWords = new StringTokenizer(userWordFrag.nextToken(), "\t");
+			while (userWordFrag.hasMoreTokens()) {
+				// String userWordtmp = userWordFrag.nextToken();
+				StringTokenizer userWords = new StringTokenizer(
+						userWordFrag.nextToken(), "\t");
 				String user = userWords.nextToken();
-				while(userWords.hasMoreTokens()){
-					StringTokenizer wordTFs = new StringTokenizer(userWords.nextToken(), ",");
-					while(wordTFs.hasMoreTokens()){
-						StringTokenizer wordTF = new StringTokenizer(wordTFs.nextToken());
+				while (userWords.hasMoreTokens()) {
+					StringTokenizer wordTFs = new StringTokenizer(
+							userWords.nextToken(), ",");
+					while (wordTFs.hasMoreTokens()) {
+						StringTokenizer wordTF = new StringTokenizer(
+								wordTFs.nextToken());
 						String word = wordTF.nextToken();
 						String tf = wordTF.nextToken();
 						Text outputKey = new Text();
@@ -99,13 +107,14 @@ public class TFIDF_5 {
 					}
 				}
 			}
-			
+
 		}
 	}
 
 	public static class IDFReduce extends Reducer<Text, Text, Text, Text> {
 		long userCount = 0;
-		public void setup(Context context) throws IOException{
+
+		public void setup(Context context) throws IOException {
 			Configuration conf = context.getConfiguration();
 			Path path = new Path(fileURL);
 			FileSystem fs = FileSystem.get(URI.create(hdfsURL), conf);
@@ -126,6 +135,7 @@ public class TFIDF_5 {
 			}
 			input.close();
 		}
+
 		public void reduce(Text key, Iterable<Text> values, Context context)
 				throws IOException, InterruptedException {
 			LinkedList<String> userList = new LinkedList<String>();
@@ -150,7 +160,7 @@ public class TFIDF_5 {
 				outputValue.set(outputTmp);
 				context.write(key, outputValue);
 			}
-		}	
+		}
 	}
 
 	public static class UserCountMap extends Mapper<Object, Text, Text, Text> {
@@ -172,8 +182,8 @@ public class TFIDF_5 {
 
 	public static class UserCountCombine extends
 			Reducer<Text, Text, Text, Text> {
-		public void reduce(Text key, Iterable<Text> values,
-				Context context) throws IOException, InterruptedException {
+		public void reduce(Text key, Iterable<Text> values, Context context)
+				throws IOException, InterruptedException {
 			long user = 0;
 			for (Text value : values) {
 				String valueTmp = value.toString();
@@ -187,16 +197,18 @@ public class TFIDF_5 {
 
 	public static class UserCountReduce extends Reducer<Text, Text, Text, Text> {
 		int userCount = 0;
-		public void reduce(Text key, Iterable<Text> values,
-				Context context) throws IOException, InterruptedException {
+
+		public void reduce(Text key, Iterable<Text> values, Context context)
+				throws IOException, InterruptedException {
 			for (Text value : values) {
 				String valueTmp = value.toString();
 				userCount += Long.parseLong(valueTmp);
 			}
 		}
-		public void cleanup(Context context) throws IOException{
+
+		public void cleanup(Context context) throws IOException {
 			Configuration conf = context.getConfiguration();
-			FileSystem fs = FileSystem.get(URI.create(hdfsURL),conf);
+			FileSystem fs = FileSystem.get(URI.create(hdfsURL), conf);
 			Path path = new Path(fileURL);
 			FSDataOutputStream output = fs.create(path, true);
 			String content = Long.toString(userCount);
@@ -210,7 +222,7 @@ public class TFIDF_5 {
 			ClassNotFoundException, InterruptedException {
 		// TODO Auto-generated method stub
 		Configuration conf = new Configuration();
-//		conf.set("mapred.child.java.opts", "-Xmx4096m");
+		// conf.set("mapred.child.java.opts", "-Xmx4096m");
 		Job tfJob = Job.getInstance(conf, "tfjob");
 		tfJob.setJarByClass(TFIDF_5.class);
 		tfJob.setMapperClass(TFMap.class);
@@ -221,17 +233,32 @@ public class TFIDF_5 {
 		FileInputFormat.setInputPaths(tfJob, new Path(args[0]));
 		FileOutputFormat.setOutputPath(tfJob, new Path(args[1]));
 		tfJob.waitForCompletion(true);
-		
-		Job userCountJob = Job.getInstance(conf, "usercountjob");
-		userCountJob.setJarByClass(TFIDF_5.class);
-		userCountJob.setMapperClass(UserCountMap.class);
-		userCountJob.setCombinerClass(UserCountCombine.class);
-		userCountJob.setReducerClass(UserCountReduce.class);
-		userCountJob.setOutputKeyClass(Text.class);
-		userCountJob.setOutputValueClass(Text.class);
-		FileInputFormat.setInputPaths(userCountJob, new Path(args[1]));
-		FileOutputFormat.setOutputPath(userCountJob, new Path(args[2]));
-		userCountJob.waitForCompletion(true);
+
+		// Job userCountJob = Job.getInstance(conf, "usercountjob");
+		// userCountJob.setJarByClass(TFIDF_5.class);
+		// userCountJob.setMapperClass(UserCountMap.class);
+		// userCountJob.setCombinerClass(UserCountCombine.class);
+		// userCountJob.setReducerClass(UserCountReduce.class);
+		// userCountJob.setOutputKeyClass(Text.class);
+		// userCountJob.setOutputValueClass(Text.class);
+		// FileInputFormat.setInputPaths(userCountJob, new Path(args[1]));
+		// FileOutputFormat.setOutputPath(userCountJob, new Path(args[2]));
+		// userCountJob.waitForCompletion(true);
+
+		Counter ct = tfJob.getCounters().findCounter(
+				"org.apache.hadoop.mapreduce.TaskCounter", "MAP_INPUT_RECORDS");
+		System.out.println(ct.getValue());
+		Iterable<String> groupNames = tfJob.getCounters().getGroupNames();
+		for (String groupName : groupNames) {
+			System.out.println(groupName);
+		}
+		FileSystem fs = FileSystem.get(URI.create(hdfsURL), conf);
+		Path path = new Path(fileURL);
+		FSDataOutputStream output = fs.create(path, true);
+		String content = Long.toString(ct.getValue());
+		output.write(content.getBytes());
+		output.flush();
+		output.close();
 
 		Job idfJob = Job.getInstance(conf, "idfjob");
 		idfJob.setJarByClass(TFIDF_5.class);
@@ -242,8 +269,7 @@ public class TFIDF_5 {
 		FileInputFormat.setInputPaths(idfJob, new Path(args[1]));
 		FileOutputFormat.setOutputPath(idfJob, new Path(args[3]));
 		System.exit(idfJob.waitForCompletion(true) ? 0 : 1);
-		
-		
+
 	}
 
 }
